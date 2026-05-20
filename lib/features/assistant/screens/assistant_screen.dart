@@ -11,7 +11,7 @@ import '../../onboarding/repositories/user_profile_repository.dart';
 import '../models/assistant_context.dart';
 import '../models/assistant_message.dart';
 import '../models/assistant_mode.dart';
-import '../services/mock_assistant_service.dart';
+import '../services/assistant_api_service.dart';
 
 class AssistantScreen extends StatefulWidget {
   const AssistantScreen({super.key});
@@ -24,7 +24,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final _dreamRepository = DreamRepository();
   final _followUpRepository = FollowUpRepository();
   final _profileRepository = UserProfileRepository();
-  final _assistantService = const MockAssistantService();
+  final _assistantService = const AssistantApiService();
   final _messageController = TextEditingController();
 
   late Future<_AssistantData> _assistantDataFuture;
@@ -102,24 +102,41 @@ class _AssistantScreenState extends State<AssistantScreen> {
       _messages.add(AssistantMessage(text: text, isUser: true));
     });
 
-    final reply = await _assistantService.reply(
-      context: AssistantContext(
-        mode: _mode,
-        dream: dream,
-        followUpAnswers: _selectedAnswers,
-        userProfile: profile,
-      ),
-      userMessage: text,
-    );
+    try {
+      final reply = await _assistantService.reply(
+        context: AssistantContext(
+          mode: _mode,
+          dream: dream,
+          followUpAnswers: _selectedAnswers,
+          userProfile: profile,
+        ),
+        userMessage: text,
+      );
 
-    if (!mounted) {
-      return;
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _messages.add(AssistantMessage(text: reply, isUser: false));
+        _isSending = false;
+      });
+    } catch (_) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _messages.add(
+          const AssistantMessage(
+            text:
+                'I could not reach the AI assistant. Please check that the backend is running and the OpenAI API key is set.',
+            isUser: false,
+          ),
+        );
+        _isSending = false;
+      });
     }
-
-    setState(() {
-      _messages.add(AssistantMessage(text: reply, isUser: false));
-      _isSending = false;
-    });
   }
 
   @override

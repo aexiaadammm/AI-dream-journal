@@ -32,4 +32,14 @@ class DreamEntry {
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
+
+  factory DreamEntry.fromApiJson(Map<String, Object?> json) {
+    return DreamEntry(
+      id: (json['id'] as num?)?.toInt(),
+      title: (json['title'] as String?) ?? 'Untitled dream',
+      description: (json['dreamText'] as String?) ?? '',
+      mood: (json['emotions'] as String?) ?? 'Not recorded',
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
 }

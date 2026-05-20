@@ -5,7 +5,7 @@ import 'mock_ai_analysis_provider.dart';
 
 class AIAnalysisService {
   const AIAnalysisService({
-    this.useMockProvider = true,
+    this.useMockProvider = false,
     this.apiClient = const ApiClient(),
     this.mockProvider = const MockAIAnalysisProvider(),
   });

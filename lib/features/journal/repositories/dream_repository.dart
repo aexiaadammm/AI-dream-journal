@@ -1,27 +1,50 @@
-import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
 
-import '../../../core/storage/local_database.dart';
+import 'package:http/http.dart' as http;
+
 import '../models/dream_entry.dart';
 
 class DreamRepository {
-  DreamRepository({LocalDatabase? localDatabase})
-    : _localDatabase = localDatabase ?? LocalDatabase.instance;
+  DreamRepository({this.baseUrl = 'http://localhost:8080'});
 
-  final LocalDatabase _localDatabase;
+  final String baseUrl;
 
   Future<int> addDream(DreamEntry dream) async {
-    final db = await _localDatabase.database;
-    return db.insert(
-      'dreams',
-      dream.toMap()..remove('id'),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/dreams'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'userId': 'default-user',
+        'title': dream.title,
+        'dreamText': dream.description,
+        'mood': dream.mood,
+      }),
     );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Could not save dream: ${response.statusCode}');
+    }
+
+    final savedDream = DreamEntry.fromApiJson(
+      jsonDecode(response.body) as Map<String, Object?>,
+    );
+    return savedDream.id!;
   }
 
   Future<List<DreamEntry>> getDreams() async {
-    final db = await _localDatabase.database;
-    final rows = await db.query('dreams', orderBy: 'created_at DESC');
+    final response = await http.get(Uri.parse('$baseUrl/api/dreams'));
 
-    return rows.map(DreamEntry.fromMap).toList();
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception('Could not load dreams: ${response.statusCode}');
+    }
+
+    final decodedDreams = jsonDecode(response.body) as List;
+    return decodedDreams
+        .map(
+          (dream) => DreamEntry.fromApiJson(
+            Map<String, Object?>.from(dream as Map),
+          ),
+        )
+        .toList();
   }
 }

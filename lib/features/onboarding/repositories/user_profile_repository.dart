@@ -1,36 +1,27 @@
-import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
 
-import '../../../core/storage/local_database.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/user_profile.dart';
 
 class UserProfileRepository {
-  UserProfileRepository({LocalDatabase? localDatabase})
-    : _localDatabase = localDatabase ?? LocalDatabase.instance;
-
-  final LocalDatabase _localDatabase;
+  static const _profileKey = 'user_profile';
 
   Future<void> saveProfile(UserProfile profile) async {
-    final db = await _localDatabase.database;
-    await db.insert(
-      'user_profiles',
-      profile.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_profileKey, jsonEncode(profile.toMap()));
   }
 
   Future<UserProfile?> getProfile() async {
-    final db = await _localDatabase.database;
-    final rows = await db.query(
-      'user_profiles',
-      where: 'id = ?',
-      whereArgs: [1],
-      limit: 1,
-    );
+    final preferences = await SharedPreferences.getInstance();
+    final rawProfile = preferences.getString(_profileKey);
 
-    if (rows.isEmpty) {
+    if (rawProfile == null) {
       return null;
     }
 
-    return UserProfile.fromMap(rows.first);
+    return UserProfile.fromMap(
+      Map<String, Object?>.from(jsonDecode(rawProfile) as Map),
+    );
   }
 }
